@@ -1,2 +1,8 @@
-SRAM=0
+DFS = 0
+NET = 1
+
+SRAM = 0        ; Options are 0 or 1
+NOVELLA = FALSE ; Options are TRUE of FALSE
+FSN = DFS       ; Options are DFS or NET
+
 include "exile.6502"

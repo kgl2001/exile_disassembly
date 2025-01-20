@@ -24,6 +24,10 @@ PRINT "screen height:",screen_height
 
 screen_base_page=$80-screen_size_pages
 
+IF NOVELLA = TRUE
+screen_base_addr = &7c00
+ENDIF
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -248,6 +252,8 @@ timer_4=&DC
 object_held=&DD
 player_angle=&DE
 player_facing=&DF
+
+org load_address
 
 org base_address
 
@@ -535,6 +541,9 @@ particles_unused=10*11
 ;; ##############################################################################
 
 .object_sprite_lookup
+IF NOVELLA = TRUE
+l0296 = object_sprite_lookup+12
+ENDIF
     ;;   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
     equb $04,$14,$04,$75,$1E,$1B,$10,$10,$10,$1C,$1C,$20,$70,$70,$61,$52; 00
     equb $72,$4F,$21,$08,$08,$21,$21,$08,$08,$21,$78,$78,$13,$13,$13,$5E; 10
@@ -962,6 +971,9 @@ particles_unused=10*11
     equb $03
     
 .background_objects_handler_lookup
+IF NOVELLA = TRUE
+l07e7 = background_objects_handler_lookup+249
+ENDIF
     equb $89,$89,$89,$89,$89,$8A,$46,$C6,$06,$06,$46,$05,$05,$00,$C3,$04
     equb $83,$84,$84,$83,$88,$48,$02,$02,$42,$02,$7B,$22,$1E,$06,$06,$C6
     equb $06,$46,$46,$85,$85,$87,$89,$89,$C7,$0A,$8C,$03,$84,$83,$43,$84
@@ -1499,6 +1511,9 @@ ENDIF
     equb $DC
 .secondary_object_stack_energy_and_low
     equb $F0,$F3,$71,$79,$FB,$42,$F5,$47,$F3,$F2,$F3,$F2,$F0,$FB,$F2,$40
+IF NOVELLA = TRUE
+.l0b63
+ENDIF
     equb $FB,$F0,$F1,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
     
 ;;  variables used for secondary stack
@@ -1580,7 +1595,13 @@ ENDIF
 .plot_sprite_when_to_flags_and
     equb $05
     equb $0A
+IF NOVELLA = TRUE
+.l0ba7
+ENDIF
     equb $00
+IF NOVELLA = TRUE
+.l0ba8
+ENDIF
     equb $00
 first_bullet_type=$13
 first_robot_type=$1c
@@ -7910,6 +7931,11 @@ IF SRAM
 ENDIF
 
 ;;  unused code
+IF NOVELLA = TRUE
+.sub_c313e
+ELSE
+;;  unused code
+ENDIF
     LDA switch_effects_table,Y
     JSR shift_right_two_while_keeping_sign
     AND #$15
@@ -9197,6 +9223,21 @@ ENDIF
 .L394B
     JMP convert_object_keeping_palette
 .null_function
+
+IF NOVELLA = TRUE
+.c394e
+    ldy #&44 ; 'D'                                                              ; 4a4e: a0 44       .D  :394e[1]
+    ldx #2                                                                      ; 4a50: a2 02       ..  :3950[1]
+    jsr sub_c313e                                                               ; 4a52: 20 3e 31     >1 :3952[1]
+.loop_c3955
+    eor l0b63,y                                                                 ; 4a55: 59 63 0b    Yc. :3955[1]
+    iny                                                                         ; 4a58: c8          .   :3958[1]
+    dex                                                                         ; 4a59: ca          .   :3959[1]
+    bne loop_c3955                                                              ; 4a5a: d0 f9       ..  :395a[1]
+    eor l07e7,y                                                                 ; 4a5c: 59 e7 07    Y.. :395c[1]
+    bne c394e                                                                   ; 4a5f: d0 ed       ..  :395f[1]
+    rts                                                                         ; 4a61: 60          `   :3961[1]
+ELSE
     RTS
 ;;  (unused)
     equb $00
@@ -9208,6 +9249,8 @@ ENDIF
 IF SRAM=0
     equb $00
 ENDIF
+ENDIF
+
 .unknown_lookup_3962
     equb $32,$80,$80,$20,$20,$20,$80
 .unknown_lookup_3969
@@ -11971,7 +12014,13 @@ ENDIF
     equb $00,$46,$A9,$00,$6A,$8B,$00,$E6,$85,$D8,$00,$C7,$88,$00,$68,$00
     equb $14,$00,$28,$4C,$00,$65,$00,$89,$00,$8D,$00,$64,$2A,$00,$6B,$00
     equb $A7,$B9,$10,$00
+IF NOVELLA = TRUE
+.l499c
+    equb $EA
+ELSE
     equb $EA; (unused)
+ENDIF
+
 ;; (unused)
 ;;  called with:
 ;;  X = this_object_data
@@ -13310,6 +13359,12 @@ if SRAM=0
 if P%>&6000:ERROR "encroaching on screen RAM":endif
 else
 .sram_rom_end
+
+    copyblock sram_rom_begin, sram_rom_end, sram_ram_end
+    clear sram_rom_begin, sram_rom_end
+
+    org sram_ram_end + (sram_rom_end - sram_rom_begin)
+
 endif
 
 .program_top
@@ -13324,10 +13379,7 @@ endif
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 if SRAM
-org sram_ram_end+(sram_rom_end-sram_rom_begin)
 .sram_init2_begin
-else
-org program_top
 endif
 
 ; 12 bytes of junk???
@@ -13415,6 +13467,17 @@ equb $16,$16,$16,$16,$16,$16,$16,$16,$06,$06,$06,$06
     STA object_stack_flags,Y
     DEY
     BNE L60A0
+
+IF NOVELLA = TRUE
+    lda l499c                                                                   ; 71ab: ad 9c 49    ..I :60ab[1]
+    lsr a                                                                       ; 71ae: 4a          J   :60ae[1]
+    lsr a                                                                       ; 71af: 4a          J   :60af[1]
+    adc l499c                                                                   ; 71b0: 6d 9c 49    m.I :60b0[1]
+    eor &da                                                                     ; 71b3: 45 da       E.  :60b3[1]
+    eor &dc                                                                     ; 71b5: 45 dc       E.  :60b5[1]
+    jsr novella_protection                                                      ; 71b7: 20 35 62     5b :60b7[1]
+ENDIF
+
     LDA #$0F
     STA $FE42 ; system via
 
@@ -13449,10 +13512,531 @@ equb $16,$16,$16,$16,$16,$16,$16,$16,$06,$06,$06,$06
     LDA crtc_data,X ; push &14 to
     STA $FE20 ; video ULA control register (20 columns, 2Mhz)
     JMP intro2
+
+IF NOVELLA = TRUE
+.write_char_to_screen_addr_and_inc_addr
+l6105 = write_char_to_screen_addr_and_inc_addr+1
+l6106 = write_char_to_screen_addr_and_inc_addr+2
+    sta &ffff                                                                   ; 7204: 8d ff ff    ... :6104[1]
+    inc l6105                                                                   ; 7207: ee 05 61    ..a :6107[1]
+    bne c610f                                                                   ; 720a: d0 03       ..  :610a[1]
+    inc l6106                                                                   ; 720c: ee 06 61    ..a :610c[1]
+.c610f
+    rts                                                                         ; 720f: 60          `   :610f[1]
+
+.print_txt
+    stx &0a                                                                     ; 7210: 86 0a       ..  :6110[1]
+    sta &0b                                                                     ; 7212: 85 0b       ..  :6112[1]
+    ldy #0                                                                      ; 7214: a0 00       ..  :6114[1]
+.loop_c6116
+    lda (&0a),y                                                                 ; 7216: b1 0a       ..  :6116[1]
+    beq c6120                                                                   ; 7218: f0 06       ..  :6118[1]
+    jsr write_char_to_screen_addr_and_inc_addr                                  ; 721a: 20 04 61     .a :611a[1]
+    iny                                                                         ; 721d: c8          .   :611d[1]
+    bne loop_c6116                                                              ; 721e: d0 f6       ..  :611e[1]
+.c6120
+    rts                                                                         ; 7220: 60          `   :6120[1]
+
+.print_page_number
+    ldx #0                                                                      ; 7221: a2 00       ..  :6121[1]
+    stx &01                                                                     ; 7223: 86 01       ..  :6123[1]
+    sec                                                                         ; 7225: 38          8   :6125[1]
+.loop_c6126
+    sbc #&0a                                                                    ; 7226: e9 0a       ..  :6126[1]
+    inc &01                                                                     ; 7228: e6 01       ..  :6128[1]
+    bcs loop_c6126                                                              ; 722a: b0 fa       ..  :612a[1]
+    pha                                                                         ; 722c: 48          H   :612c[1]
+    lda &01                                                                     ; 722d: a5 01       ..  :612d[1]
+    adc #&2f ; '/'                                                              ; 722f: 69 2f       i/  :612f[1]
+    cmp #&30 ; '0'                                                              ; 7231: c9 30       .0  :6131[1]
+    beq c6138                                                                   ; 7233: f0 03       ..  :6133[1]
+    jsr write_char_to_screen_addr_and_inc_addr                                  ; 7235: 20 04 61     .a :6135[1]
+.c6138
+    pla                                                                         ; 7238: 68          h   :6138[1]
+    clc                                                                         ; 7239: 18          .   :6139[1]
+    adc #&3a ; ':'                                                              ; 723a: 69 3a       i:  :613a[1]
+    jmp write_char_to_screen_addr_and_inc_addr                                  ; 723c: 4c 04 61    L.a :613c[1]
+
+.print_line_word_number
+    pha                                                                         ; 723f: 48          H   :613f[1]
+    jsr print_page_number                                                       ; 7240: 20 21 61     !a :6140[1]
+    pla                                                                         ; 7243: 68          h   :6143[1]
+    cmp #4                                                                      ; 7244: c9 04       ..  :6144[1]
+    bcc c614a                                                                   ; 7246: 90 02       ..  :6146[1]
+    lda #4                                                                      ; 7248: a9 04       ..  :6148[1]
+.c614a
+    tax                                                                         ; 724a: aa          .   :614a[1]
+    dex                                                                         ; 724b: ca          .   :614b[1]
+    lda ordinal_indicator_char_1,x                                              ; 724c: bd 58 61    .Xa :614c[1]
+    jsr write_char_to_screen_addr_and_inc_addr                                  ; 724f: 20 04 61     .a :614f[1]
+    lda ordinal_indicator_char_2,x                                              ; 7252: bd 5c 61    .\a :6152[1]
+    jmp write_char_to_screen_addr_and_inc_addr                                  ; 7255: 4c 04 61    L.a :6155[1]
+
+.ordinal_indicator_char_1
+    equs "snrt"                                                                 ; 7258: 73 6e 72... snr :6158[1]
+.ordinal_indicator_char_2
+    equs "tddh"                                                                 ; 725c: 74 64 64... tdd :615c[1]
+.please_type_txt
+    equb &83                                                                    ; 7260: 83          .   :6160[1]
+    equs "Please type this word from the novella:"                              ; 7261: 50 6c 65... Ple :6161[1]
+    equb 0                                                                      ; 7288: 00          .   :6188[1]
+.page_txt
+    equb &86                                                                    ; 7289: 86          .   :6189[1]
+    equs "Page "                                                                ; 728a: 50 61 67... Pag :618a[1]
+    equb 0                                                                      ; 728f: 00          .   :618f[1]
+.line_from_txt
+    equb &82                                                                    ; 7290: 82          .   :6190[1]
+    equs "line from "                                                           ; 7291: 6c 69 6e... lin :6191[1]
+    equb 0                                                                      ; 729b: 00          .   :619b[1]
+.word_from_txt
+    equb &81                                                                    ; 729c: 81          .   :619c[1]
+    equs "word from "                                                           ; 729d: 77 6f 72... wor :619d[1]
+    equb 0                                                                      ; 72a7: 00          .   :61a7[1]
+.top_txt
+    equs "top"                                                                  ; 72a8: 74 6f 70    top :61a8[1]
+    equb 0                                                                      ; 72ab: 00          .   :61ab[1]
+.bottom_txt
+    equs "bottom"                                                               ; 72ac: 62 6f 74... bot :61ac[1]
+    equb 0                                                                      ; 72b2: 00          .   :61b2[1]
+.left_txt
+    equs "left"                                                                 ; 72b3: 6c 65 66... lef :61b3[1]
+    equb 0                                                                      ; 72b7: 00          .   :61b7[1]
+.right_txt
+    equs "right"                                                                ; 72b8: 72 69 67... rig :61b8[1]
+    equb 0                                                                      ; 72bd: 00          .   :61bd[1]
+.wrong_txt
+    equb &81                                                                    ; 72be: 81          .   :61be[1]
+    equs "Wrong. Try again"                                                     ; 72bf: 57 72 6f... Wro :61bf[1]
+    equb 0                                                                      ; 72cf: 00          .   :61cf[1]
+.wrong_again_txt
+    equb &82                                                                    ; 72d0: 82          .   :61d0[1]
+    equs "Wrong again. Running demo version."                                   ; 72d1: 57 72 6f... Wro :61d1[1]
+    equb 0                                                                      ; 72f3: 00          .   :61f3[1]
+.will_hang_txt
+    equb &81                                                                    ; 72f4: 81          .   :61f4[1]
+    equs "This will hang up after a few minutes"                                ; 72f5: 54 68 69... Thi :61f5[1]
+    equb 0                                                                      ; 731a: 00          .   :621a[1]
+.correct_txt
+    equb &86                                                                    ; 731b: 86          .   :621b[1]
+    equs "Correct. Running game..."                                             ; 731c: 43 6f 72... Cor :621c[1]
+    equb 0                                                                      ; 7334: 00          .   :6234[1]
+
+.novella_protection
+    jsr get_page_details                                                        ; 7335: 20 97 63     .c :6235[1]
+    jsr text_entry_banner                                                       ; 7338: 20 42 64     Bd :6238[1]
+    lda #<(screen_base_addr + 160)                                              ; 733b: a9 a0       ..  :623b[1]
+    sta write_char_to_screen_addr_and_inc_addr + 1                              ; 733d: 8d 05 61    ..a :623d[1]
+    lda #>(screen_base_addr + 160)                                              ; 7340: a9 7c       .|  :6240[1]
+    sta write_char_to_screen_addr_and_inc_addr + 2                              ; 7342: 8d 06 61    ..a :6242[1]
+    ldx #<please_type_txt                                                       ; 7345: a2 60       .`  :6245[1]
+    lda #>please_type_txt                                                       ; 7347: a9 61       .a  :6247[1]
+    jsr print_txt                                                               ; 7349: 20 10 61     .a :6249[1]
+    lda #<(screen_base_addr + 293)                                              ; 734c: a9 25       .%  :624c[1]
+    sta write_char_to_screen_addr_and_inc_addr + 1                              ; 734e: 8d 05 61    ..a :624e[1]
+    lda #>(screen_base_addr + 293)                                              ; 7351: a9 7d       .}  :6251[1]
+    sta write_char_to_screen_addr_and_inc_addr + 2                              ; 7353: 8d 06 61    ..a :6253[1]
+    ldx #<page_txt                                                              ; 7356: a2 89       ..  :6256[1]
+    lda #>page_txt                                                              ; 7358: a9 61       .a  :6258[1]
+    jsr print_txt                                                               ; 735a: 20 10 61     .a :625a[1]
+    lda &04                                                                     ; 735d: a5 04       ..  :625d[1]
+    jsr print_page_number                                                       ; 735f: 20 21 61     !a :625f[1]
+    lda #<(screen_base_addr + 368)                                              ; 7362: a9 70       .p  :6262[1]
+    sta write_char_to_screen_addr_and_inc_addr + 1                              ; 7364: 8d 05 61    ..a :6264[1]
+    lda #>(screen_base_addr + 368)                                              ; 7367: a9 7d       .}  :6267[1]
+    sta write_char_to_screen_addr_and_inc_addr + 2                              ; 7369: 8d 06 61    ..a :6269[1]
+    lda &05                                                                     ; 736c: a5 05       ..  :626c[1]
+    bpl c6272                                                                   ; 736e: 10 02       ..  :626e[1]
+    eor #&ff                                                                    ; 7370: 49 ff       I.  :6270[1]
+.c6272
+    clc                                                                         ; 7372: 18          .   :6272[1]
+    adc #1                                                                      ; 7373: 69 01       i.  :6273[1]
+    jsr print_line_word_number                                                  ; 7375: 20 3f 61     ?a :6275[1]
+    ldx #<line_from_txt                                                         ; 7378: a2 90       ..  :6278[1]
+    lda #>line_from_txt                                                         ; 737a: a9 61       .a  :627a[1]
+    jsr print_txt                                                               ; 737c: 20 10 61     .a :627c[1]
+    bit &05                                                                     ; 737f: 24 05       $.  :627f[1]
+    bmi c628d                                                                   ; 7381: 30 0a       0.  :6281[1]
+    ldx #<top_txt                                                               ; 7383: a2 a8       ..  :6283[1]
+    lda #>top_txt                                                               ; 7385: a9 61       .a  :6285[1]
+    jsr print_txt                                                               ; 7387: 20 10 61     .a :6287[1]
+    jmp c6294                                                                   ; 738a: 4c 94 62    L.b :628a[1]
+
+.c628d
+    ldx #<bottom_txt                                                            ; 738d: a2 ac       ..  :628d[1]
+    lda #>bottom_txt                                                            ; 738f: a9 61       .a  :628f[1]
+    jsr print_txt                                                               ; 7391: 20 10 61     .a :6291[1]
+.c6294
+    lda #<(screen_base_addr + 448)                                              ; 7394: a9 c0       ..  :6294[1]
+    sta write_char_to_screen_addr_and_inc_addr + 1                              ; 7396: 8d 05 61    ..a :6296[1]
+    lda #>(screen_base_addr + 448)                                              ; 7399: a9 7d       .}  :6299[1]
+    sta write_char_to_screen_addr_and_inc_addr + 2                              ; 739b: 8d 06 61    ..a :629b[1]
+    lda &07                                                                     ; 739e: a5 07       ..  :629e[1]
+    bit l499c                                                                   ; 73a0: 2c 9c 49    ,.I :62a0[1]
+    bvc c62aa                                                                   ; 73a3: 50 05       P.  :62a3[1]
+    clc                                                                         ; 73a5: 18          .   :62a5[1]
+    lda &06                                                                     ; 73a6: a5 06       ..  :62a6[1]
+    sbc &07                                                                     ; 73a8: e5 07       ..  :62a8[1]
+.c62aa
+    clc                                                                         ; 73aa: 18          .   :62aa[1]
+    adc #1                                                                      ; 73ab: 69 01       i.  :62ab[1]
+    jsr print_line_word_number                                                  ; 73ad: 20 3f 61     ?a :62ad[1]
+    ldx #<word_from_txt                                                         ; 73b0: a2 9c       ..  :62b0[1]
+    lda #>word_from_txt                                                         ; 73b2: a9 61       .a  :62b2[1]
+    jsr print_txt                                                               ; 73b4: 20 10 61     .a :62b4[1]
+    bit l499c                                                                   ; 73b7: 2c 9c 49    ,.I :62b7[1]
+    bvs print_right_txt                                                         ; 73ba: 70 0a       p.  :62ba[1]
+    ldx #<left_txt                                                              ; 73bc: a2 b3       ..  :62bc[1]
+    lda #>left_txt                                                              ; 73be: a9 61       .a  :62be[1]
+    jsr print_txt                                                               ; 73c0: 20 10 61     .a :62c0[1]
+    jmp input_txt_and_verify                                                    ; 73c3: 4c cd 62    L.b :62c3[1]
+
+.print_right_txt
+    ldx #<right_txt                                                             ; 73c6: a2 b8       ..  :62c6[1]
+    lda #>right_txt                                                             ; 73c8: a9 61       .a  :62c8[1]
+    jsr print_txt                                                               ; 73ca: 20 10 61     .a :62ca[1]
+.input_txt_and_verify
+    jsr input_txt                                                               ; 73cd: 20 5b 64     [d :62cd[1]
+; 
+; **************************************************************
+; Calculate hash from entered text and compare with value in
+; zero page register &08
+; **************************************************************
+; 
+    ldx #0                                                                      ; 73d0: a2 00       ..  :62d0[1]
+    stx &01                                                                     ; 73d2: 86 01       ..  :62d2[1]
+.loop_c62d4
+    lda screen_base_addr + 650,x                                                ; 73d4: bd 8a 7e    ..~ :62d4[1]
+    cmp #&0d                                                                    ; 73d7: c9 0d       ..  :62d7[1]
+    beq c62e4                                                                   ; 73d9: f0 09       ..  :62d9[1]
+    asl &01                                                                     ; 73db: 06 01       ..  :62db[1]
+    adc &01                                                                     ; 73dd: 65 01       e.  :62dd[1]
+    sta &01                                                                     ; 73df: 85 01       ..  :62df[1]
+    inx                                                                         ; 73e1: e8          .   :62e1[1]
+    bne loop_c62d4                                                              ; 73e2: d0 f0       ..  :62e2[1]
+.c62e4
+    lda &01                                                                     ; 73e4: a5 01       ..  :62e4[1]
+    cmp &08                                                                     ; 73e6: c5 08       ..  :62e6[1]
+    beq correct_entry                                                           ; 73e8: f0 44       .D  :62e8[1]
+    dec entry_attempts_count                                                    ; 73ea: ce 93 63    ..c :62ea[1]
+    beq failed_entry                                                            ; 73ed: f0 14       ..  :62ed[1]
+    lda #<(screen_base_addr + 809)                                              ; 73ef: a9 29       .)  :62ef[1]
+    sta write_char_to_screen_addr_and_inc_addr + 1                              ; 73f1: 8d 05 61    ..a :62f1[1]
+    lda #>(screen_base_addr + 809)                                              ; 73f4: a9 7f       ..  :62f4[1]
+    sta write_char_to_screen_addr_and_inc_addr + 2                              ; 73f6: 8d 06 61    ..a :62f6[1]
+    ldx #<wrong_txt                                                             ; 73f9: a2 be       ..  :62f9[1]
+    lda #>wrong_txt                                                             ; 73fb: a9 61       .a  :62fb[1]
+    jsr print_txt                                                               ; 73fd: 20 10 61     .a :62fd[1]
+    jmp input_txt_and_verify                                                    ; 7400: 4c cd 62    L.b :6300[1]
+
+.failed_entry
+    jsr sub_c6357                                                               ; 7403: 20 57 63     Wc :6303[1]
+    lda #<(screen_base_addr + 403)                                              ; 7406: a9 93       ..  :6306[1]
+    sta write_char_to_screen_addr_and_inc_addr + 1                              ; 7408: 8d 05 61    ..a :6308[1]
+    lda #>(screen_base_addr + 403)                                              ; 740b: a9 7d       .}  :630b[1]
+    sta write_char_to_screen_addr_and_inc_addr + 2                              ; 740d: 8d 06 61    ..a :630d[1]
+    ldx #<wrong_again_txt                                                       ; 7410: a2 d0       ..  :6310[1]
+    lda #>wrong_again_txt                                                       ; 7412: a9 61       .a  :6312[1]
+    jsr print_txt                                                               ; 7414: 20 10 61     .a :6314[1]
+    lda #<(screen_base_addr + 481)                                              ; 7417: a9 e1       ..  :6317[1]
+    sta write_char_to_screen_addr_and_inc_addr + 1                              ; 7419: 8d 05 61    ..a :6319[1]
+    lda #>(screen_base_addr + 481)                                              ; 741c: a9 7d       .}  :631c[1]
+    sta write_char_to_screen_addr_and_inc_addr + 2                              ; 741e: 8d 06 61    ..a :631e[1]
+    ldx #<will_hang_txt                                                         ; 7421: a2 f4       ..  :6321[1]
+    lda #>will_hang_txt                                                         ; 7423: a9 61       .a  :6323[1]
+    jsr print_txt                                                               ; 7425: 20 10 61     .a :6325[1]
+    jsr delay_loop                                                              ; 7428: 20 42 63     Bc :6328[1]
+    jmp delay_loop                                                              ; 742b: 4c 42 63    LBc :632b[1]
+
+.correct_entry
+    jsr sub_c6357                                                               ; 742e: 20 57 63     Wc :632e[1]
+    lda #<(screen_base_addr + 405)                                              ; 7431: a9 95       ..  :6331[1]
+    sta write_char_to_screen_addr_and_inc_addr + 1                              ; 7433: 8d 05 61    ..a :6333[1]
+    lda #>(screen_base_addr + 405)                                              ; 7436: a9 7d       .}  :6336[1]
+    sta write_char_to_screen_addr_and_inc_addr + 2                              ; 7438: 8d 06 61    ..a :6338[1]
+    ldx #<correct_txt                                                           ; 743b: a2 1b       ..  :633b[1]
+    lda #>correct_txt                                                           ; 743d: a9 62       .b  :633d[1]
+    jsr print_txt                                                               ; 743f: 20 10 61     .a :633f[1]
+.delay_loop
+    lda #&0a                                                                    ; 7442: a9 0a       ..  :6342[1]
+    sta delay_count                                                             ; 7444: 8d 94 63    ..c :6344[1]
+    ldx #0                                                                      ; 7447: a2 00       ..  :6347[1]
+    ldy #0                                                                      ; 7449: a0 00       ..  :6349[1]
+.c634b
+    dex                                                                         ; 744b: ca          .   :634b[1]
+    bne c634b                                                                   ; 744c: d0 fd       ..  :634c[1]
+    dey                                                                         ; 744e: 88          .   :634e[1]
+    bne c634b                                                                   ; 744f: d0 fa       ..  :634f[1]
+    dec delay_count                                                             ; 7451: ce 94 63    ..c :6351[1]
+    bne c634b                                                                   ; 7454: d0 f5       ..  :6354[1]
+    rts                                                                         ; 7456: 60          `   :6356[1]
+
+.sub_c6357
+    lda &09                                                                     ; 7457: a5 09       ..  :6357[1]
+    sta l0ba7                                                                   ; 7459: 8d a7 0b    ... :6359[1]
+    ldx #0                                                                      ; 745c: a2 00       ..  :635c[1]
+    stx &01                                                                     ; 745e: 86 01       ..  :635e[1]
+    txa                                                                         ; 7460: 8a          .   :6360[1]
+    clc                                                                         ; 7461: 18          .   :6361[1]
+.loop_c6362
+    sbc &01                                                                     ; 7462: e5 01       ..  :6362[1]
+    sta &01                                                                     ; 7464: 85 01       ..  :6364[1]
+    lda screen_base_addr + 650,x                                                ; 7466: bd 8a 7e    ..~ :6366[1]
+    inx                                                                         ; 7469: e8          .   :6369[1]
+    eor #&0d                                                                    ; 746a: 49 0d       I.  :636a[1]
+    bne loop_c6362                                                              ; 746c: d0 f4       ..  :636c[1]
+    lda &01                                                                     ; 746e: a5 01       ..  :636e[1]
+    sta l0ba8                                                                   ; 7470: 8d a8 0b    ... :6370[1]
+    jmp clear_screen                                                            ; 7473: 4c 13 64    L.d :6373[1]
+
+    equb &29, &44, &2a, &20, &51, &4b, &4e, &20, &4a, &73, &77, &6a             ; 7476: 29 44 2a... )D* :6376[1]
+    equb &6f, &20, &27, &20, &4b, &44, &20, &54, &6e, &6a, &75, &69             ; 7482: 6f 20 27... o ' :6382[1]
+    equb &20, &32, &3a, &39, &39                                                ; 748e: 20 32 3a...  2: :638e[1]
+.entry_attempts_count
+    equb 8                                                                      ; 7493: 08          .   :6393[1]
+.delay_count
+    equb &0a                                                                    ; 7494: 0a          .   :6394[1]
+.l6395
+    equb 0                                                                      ; 7495: 00          .   :6395[1]
+    equb 0                                                                      ; 7496: 00          .   :6396[1]
+
+.get_page_details
+    sta l6395                                                                   ; 7497: 8d 95 63    ..c :6397[1]
+    lda #0                                                                      ; 749a: a9 00       ..  :639a[1]
+    sta l6395 + 1                                                               ; 749c: 8d 96 63    ..c :639c[1]
+.loop_c639f
+    lda l6395 + 1                                                               ; 749f: ad 96 63    ..c :639f[1]
+    and #&80                                                                    ; 74a2: 29 80       ).  :63a2[1]
+    sta l6395 + 1                                                               ; 74a4: 8d 96 63    ..c :63a4[1]
+    lda #0                                                                      ; 74a7: a9 00       ..  :63a7[1]
+    sta &04                                                                     ; 74a9: 85 04       ..  :63a9[1]
+    lda #<table_01                                                              ; 74ab: a9 69       .i  :63ab[1]
+    sta &02                                                                     ; 74ad: 85 02       ..  :63ad[1]
+    lda #>table_01                                                              ; 74af: a9 65       .e  :63af[1]
+    sta &03                                                                     ; 74b1: 85 03       ..  :63b1[1]
+    ldy #0                                                                      ; 74b3: a0 00       ..  :63b3[1]
+.c63b5
+    lda (&02),y                                                                 ; 74b5: b1 02       ..  :63b5[1]
+    beq loop_c639f                                                              ; 74b7: f0 e6       ..  :63b7[1]
+    and #&f0                                                                    ; 74b9: 29 f0       ).  :63b9[1]
+    bne c63cc                                                                   ; 74bb: d0 0f       ..  :63bb[1]
+    lda (&02),y                                                                 ; 74bd: b1 02       ..  :63bd[1]
+    clc                                                                         ; 74bf: 18          .   :63bf[1]
+    adc &04                                                                     ; 74c0: 65 04       e.  :63c0[1]
+    sta &04                                                                     ; 74c2: 85 04       ..  :63c2[1]
+    inc &02                                                                     ; 74c4: e6 02       ..  :63c4[1]
+    bne c63b5                                                                   ; 74c6: d0 ed       ..  :63c6[1]
+    inc &03                                                                     ; 74c8: e6 03       ..  :63c8[1]
+    bne c63b5                                                                   ; 74ca: d0 e9       ..  :63ca[1]
+.c63cc
+    lda l6395 + 1                                                               ; 74cc: ad 96 63    ..c :63cc[1]
+    cmp l6395                                                                   ; 74cf: cd 95 63    ..c :63cf[1]
+    beq c63e4                                                                   ; 74d2: f0 10       ..  :63d2[1]
+    inc l6395 + 1                                                               ; 74d4: ee 96 63    ..c :63d4[1]
+    clc                                                                         ; 74d7: 18          .   :63d7[1]
+    lda &02                                                                     ; 74d8: a5 02       ..  :63d8[1]
+    adc #3                                                                      ; 74da: 69 03       i.  :63da[1]
+    sta &02                                                                     ; 74dc: 85 02       ..  :63dc[1]
+    bcc c63b5                                                                   ; 74de: 90 d5       ..  :63de[1]
+    inc &03                                                                     ; 74e0: e6 03       ..  :63e0[1]
+    bne c63b5                                                                   ; 74e2: d0 d1       ..  :63e2[1]
+.c63e4
+    lda (&02),y                                                                 ; 74e4: b1 02       ..  :63e4[1]
+    and #&0f                                                                    ; 74e6: 29 0f       ).  :63e6[1]
+    sec                                                                         ; 74e8: 38          8   :63e8[1]
+    sbc #8                                                                      ; 74e9: e9 08       ..  :63e9[1]
+    sta &05                                                                     ; 74eb: 85 05       ..  :63eb[1]
+    lda (&02),y                                                                 ; 74ed: b1 02       ..  :63ed[1]
+    lsr a                                                                       ; 74ef: 4a          J   :63ef[1]
+    lsr a                                                                       ; 74f0: 4a          J   :63f0[1]
+    lsr a                                                                       ; 74f1: 4a          J   :63f1[1]
+    lsr a                                                                       ; 74f2: 4a          J   :63f2[1]
+    sta &06                                                                     ; 74f3: 85 06       ..  :63f3[1]
+    iny                                                                         ; 74f5: c8          .   :63f5[1]
+    lda (&02),y                                                                 ; 74f6: b1 02       ..  :63f6[1]
+    sta &08                                                                     ; 74f8: 85 08       ..  :63f8[1]
+    iny                                                                         ; 74fa: c8          .   :63fa[1]
+    lda (&02),y                                                                 ; 74fb: b1 02       ..  :63fb[1]
+    sta &09                                                                     ; 74fd: 85 09       ..  :63fd[1]
+    lda &04                                                                     ; 74ff: a5 04       ..  :63ff[1]
+    asl a                                                                       ; 7501: 0a          .   :6401[1]
+    asl a                                                                       ; 7502: 0a          .   :6402[1]
+    asl a                                                                       ; 7503: 0a          .   :6403[1]
+    clc                                                                         ; 7504: 18          .   :6404[1]
+    adc &05                                                                     ; 7505: 65 05       e.  :6405[1]
+.loop_c6407
+    cmp &06                                                                     ; 7507: c5 06       ..  :6407[1]
+    bcc c6410                                                                   ; 7509: 90 05       ..  :6409[1]
+    sbc &06                                                                     ; 750b: e5 06       ..  :640b[1]
+    jmp loop_c6407                                                              ; 750d: 4c 07 64    L.d :640d[1]
+
+.c6410
+    sta &07                                                                     ; 7510: 85 07       ..  :6410[1]
+    rts                                                                         ; 7512: 60          `   :6412[1]
+
+.clear_screen
+    lda #0                                                                      ; 7513: a9 00       ..  :6413[1]
+    tay                                                                         ; 7515: a8          .   :6415[1]
+    ldx #4                                                                      ; 7516: a2 04       ..  :6416[1]
+.c6418
+    sta screen_base_addr,y                                                      ; 7518: 99 00 7c    ..| :6418[1]
+    dey                                                                         ; 751b: 88          .   :641b[1]
+    bne c6418                                                                   ; 751c: d0 fa       ..  :641c[1]
+    inc c6418 + 2                                                               ; 751e: ee 1a 64    ..d :641e[1]
+    dex                                                                         ; 7521: ca          .   :6421[1]
+    bne c6418                                                                   ; 7522: d0 f4       ..  :6422[1]
+    dec c6418 + 2                                                               ; 7524: ce 1a 64    ..d :6424[1]
+    dec c6418 + 2                                                               ; 7527: ce 1a 64    ..d :6427[1]
+    dec c6418 + 2                                                               ; 752a: ce 1a 64    ..d :642a[1]
+    dec c6418 + 2                                                               ; 752d: ce 1a 64    ..d :642d[1]
+    lda #0                                                                      ; 7530: a9 00       ..  :6430[1]
+    ldx #&0e                                                                    ; 7532: a2 0e       ..  :6432[1]
+    stx &fe00                                                                   ; 7534: 8e 00 fe    ... :6434[1]
+    sta &fe01                                                                   ; 7537: 8d 01 fe    ... :6437[1]
+    inx                                                                         ; 753a: e8          .   :643a[1]
+    stx &fe00                                                                   ; 753b: 8e 00 fe    ... :643b[1]
+    sta &fe01                                                                   ; 753e: 8d 01 fe    ... :643e[1]
+    rts                                                                         ; 7541: 60          `   :6441[1]
+
+.text_entry_banner
+    jsr clear_screen                                                            ; 7542: 20 13 64     .d :6442[1]
+    lda #&84                                                                    ; 7545: a9 84       ..  :6445[1]
+    sta screen_base_addr + 647                                                  ; 7547: 8d 87 7e    ..~ :6447[1]
+    lda #&9d                                                                    ; 754a: a9 9d       ..  :644a[1]
+    sta screen_base_addr + 648                                                  ; 754c: 8d 88 7e    ..~ :644c[1]
+    lda #&83                                                                    ; 754f: a9 83       ..  :644f[1]
+    sta screen_base_addr + 649                                                  ; 7551: 8d 89 7e    ..~ :6451[1]
+    lda #&9c                                                                    ; 7554: a9 9c       ..  :6454[1]
+    sta screen_base_addr + 668                                                  ; 7556: 8d 9c 7e    ..~ :6456[1]
+    rts                                                                         ; 7559: 60          `   :6459[1]
+
+.input_char_count
+    equb 0                                                                      ; 755a: 00          .   :645a[1]
+
+.input_txt
+    jsr sub_c64f5                                                               ; 755b: 20 f5 64     .d :645b[1]
+; 
+; **************************************************************
+; Clear text entry banner
+; **************************************************************
+; 
+    ldx #&10                                                                    ; 755e: a2 10       ..  :645e[1]
+    lda #&20 ; ' '                                                              ; 7560: a9 20       .   :6460[1]
+.loop_c6462
+    sta screen_base_addr + 650,x                                                ; 7562: 9d 8a 7e    ..~ :6462[1]
+    dex                                                                         ; 7565: ca          .   :6465[1]
+    bpl loop_c6462                                                              ; 7566: 10 fa       ..  :6466[1]
+    ldx #0                                                                      ; 7568: a2 00       ..  :6468[1]
+    stx input_char_count                                                        ; 756a: 8e 5a 64    .Zd :646a[1]
+.get_char
+    lda #<(screen_base_addr + 650)                                              ; 756d: a9 8a       ..  :646d[1]
+    clc                                                                         ; 756f: 18          .   :646f[1]
+    adc input_char_count                                                        ; 7570: 6d 5a 64    mZd :6470[1]
+    tay                                                                         ; 7573: a8          .   :6473[1]
+    lda #>(screen_base_addr + 650)                                              ; 7574: a9 7e       .~  :6474[1]
+    adc #0                                                                      ; 7576: 69 00       i.  :6476[1]
+    sec                                                                         ; 7578: 38          8   :6478[1]
+    sbc #&54 ; 'T'                                                              ; 7579: e9 54       .T  :6479[1]
+    ldx #&0f                                                                    ; 757b: a2 0f       ..  :647b[1]
+    stx &fe00                                                                   ; 757d: 8e 00 fe    ... :647d[1]
+    sty &fe01                                                                   ; 7580: 8c 01 fe    ... :6480[1]
+    dex                                                                         ; 7583: ca          .   :6483[1]
+    stx &fe00                                                                   ; 7584: 8e 00 fe    ... :6484[1]
+    sta &fe01                                                                   ; 7587: 8d 01 fe    ... :6487[1]
+    jsr read_char                                                               ; 758a: 20 29 65     )e :648a[1]
+    cmp #&0d                                                                    ; 758d: c9 0d       ..  :648d[1]
+    beq input_txt_complete                                                      ; 758f: f0 24       .$  :648f[1]
+    cmp #&7f                                                                    ; 7591: c9 7f       ..  :6491[1]
+    bne process_char                                                            ; 7593: d0 10       ..  :6493[1]
+    ldx input_char_count                                                        ; 7595: ae 5a 64    .Zd :6495[1]
+    beq get_char                                                                ; 7598: f0 d3       ..  :6498[1]
+    lda #&20 ; ' '                                                              ; 759a: a9 20       .   :649a[1]
+    sta screen_base_addr + 649,x                                                ; 759c: 9d 89 7e    ..~ :649c[1]
+    dec input_char_count                                                        ; 759f: ce 5a 64    .Zd :649f[1]
+    jmp get_char                                                                ; 75a2: 4c 6d 64    Lmd :64a2[1]
+
+.process_char
+    ldx input_char_count                                                        ; 75a5: ae 5a 64    .Zd :64a5[1]
+    cpx #&10                                                                    ; 75a8: e0 10       ..  :64a8[1]
+    beq get_char                                                                ; 75aa: f0 c1       ..  :64aa[1]
+    sta screen_base_addr + 650,x                                                ; 75ac: 9d 8a 7e    ..~ :64ac[1]
+    inc input_char_count                                                        ; 75af: ee 5a 64    .Zd :64af[1]
+    jmp get_char                                                                ; 75b2: 4c 6d 64    Lmd :64b2[1]
+
+.input_txt_complete
+    ldx input_char_count                                                        ; 75b5: ae 5a 64    .Zd :64b5[1]
+    sta screen_base_addr + 650,x                                                ; 75b8: 9d 8a 7e    ..~ :64b8[1]
+    rts                                                                         ; 75bb: 60          `   :64bb[1]
+
+.system_via_data
+    equb &49, &59, &41, &64, &52, &32, &22, &43, &53, &54, &25, &45             ; 75bc: 49 59 41... IYA :64bc[1]
+    equb &46, &56, &65, &55, &36, &37, &10, &33, &51, &23, &35, &63             ; 75c8: 46 56 65... FVe :64c8[1]
+    equb &21, &42, &44, &61                                                     ; 75d4: 21 42 44... !BD :64d4[1]
+.l64d8
+    equb 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0                                     ; 75d8: 00 00 00... ... :64d8[1]
+    equb 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0                                     ; 75e4: 00 00 00... ... :64e4[1]
+    equb 0, 0, 0, 0                                                             ; 75f0: 00 00 00... ... :64f0[1]
+.l64f4
+    equb 0                                                                      ; 75f4: 00          .   :64f4[1]
+
+.sub_c64f5
+    sec                                                                         ; 75f5: 38          8   :64f5[1]
+    bcs c64f9                                                                   ; 75f6: b0 01       ..  :64f6[1]
+.sub_c64f8
+    clc                                                                         ; 75f8: 18          .   :64f8[1]
+.c64f9
+    ror l64f4                                                                   ; 75f9: 6e f4 64    n.d :64f9[1]
+    lda #&7f                                                                    ; 75fc: a9 7f       ..  :64fc[1]
+    sta &fe43                                                                   ; 75fe: 8d 43 fe    .C. :64fe[1]
+    lda #3                                                                      ; 7601: a9 03       ..  :6501[1]
+    sta &fe40                                                                   ; 7603: 8d 40 fe    .@. :6503[1]
+    ldx #&1b                                                                    ; 7606: a2 1b       ..  :6506[1]
+.loop_c6508
+    lda system_via_data,x                                                       ; 7608: bd bc 64    ..d :6508[1]
+    sta &fe4f                                                                   ; 760b: 8d 4f fe    .O. :650b[1]
+    lda &fe4f                                                                   ; 760e: ad 4f fe    .O. :650e[1]
+    rol a                                                                       ; 7611: 2a          *   :6511[1]
+    ror l64d8,x                                                                 ; 7612: 7e d8 64    ~.d :6512[1]
+    bit l64f4                                                                   ; 7615: 2c f4 64    ,.d :6515[1]
+    bmi c6522                                                                   ; 7618: 30 08       0.  :6518[1]
+    lda l64d8,x                                                                 ; 761a: bd d8 64    ..d :651a[1]
+    rol a                                                                       ; 761d: 2a          *   :651d[1]
+    bcc c6522                                                                   ; 761e: 90 02       ..  :651e[1]
+    bpl c6525                                                                   ; 7620: 10 03       ..  :6520[1]
+.c6522
+    dex                                                                         ; 7622: ca          .   :6522[1]
+    bpl loop_c6508                                                              ; 7623: 10 e3       ..  :6523[1]
+.c6525
+    lda #&0b                                                                    ; 7625: a9 0b       ..  :6525[1]
+    txa                                                                         ; 7627: 8a          .   :6527[1]
+    rts                                                                         ; 7628: 60          `   :6528[1]
+
+.read_char
+    jsr sub_c64f8                                                               ; 7629: 20 f8 64     .d :6529[1]
+    bmi read_char                                                               ; 762c: 30 fb       0.  :652c[1]
+    bne c6533                                                                   ; 762e: d0 03       ..  :652e[1]
+    lda #&0d                                                                    ; 7630: a9 0d       ..  :6530[1]
+    rts                                                                         ; 7632: 60          `   :6532[1]
+
+.c6533
+    dex                                                                         ; 7633: ca          .   :6533[1]
+    bne c6539                                                                   ; 7634: d0 03       ..  :6534[1]
+    lda #&7f                                                                    ; 7636: a9 7f       ..  :6536[1]
+    rts                                                                         ; 7638: 60          `   :6538[1]
+
+.c6539
+    clc                                                                         ; 7639: 18          .   :6539[1]
+    adc #&3f ; '?'                                                              ; 763a: 69 3f       i?  :653a[1]
+    rts                                                                         ; 763c: 60          `   :653c[1]
+
+    equs "24/10/88 Disc (compact) RELEASE 2"                                    ; 763d: 32 34 2f... 24/ :653d[1]
+;ENDIF
+ELSE
 IF SRAM
     equb $00
     equb $00
 ENDIF
+ENDIF
+
 .crtc_data
 equb $14                        ; ula
 equb $7F                        ; r0
@@ -13470,28 +14054,106 @@ equb $1B                        ; r7
 ENDIF
 equb $00                        ; r8
 equb $07                        ; r9
-.main_end
+
+IF NOVELLA = TRUE
+.table_01
+    equb   6, &f8, &6b, &62, &29, &5e, &4b, &ca, &ec, &67, &cb, &d1             ; 7669: 06 f8 6b... ..k :6569[1]
+    equb &b3, &5f, &56, &3f, &f6, &67, &6b, &87, &a0, &8f,   1, &47             ; 7675: b3 5f 56... ._V :6575[1]
+    equb &9c, &9d,   1, &58, &e8, &45, &dd, &e5, &3e, &c2, &e4, &8d             ; 7681: 9c 9d 01... ... :6581[1]
+    equb &a3, &85, &9e, &c5,   2, &32, &c7, &24, &5b,   1, &c8, &57             ; 768d: a3 85 9e... ... :658d[1]
+    equb   1, &d9, &47, &96, &fa, &58,   7, &c3, &e1, &73, &d6, &32             ; 7699: 01 d9 47... ..G :6599[1]
+    equb &1b, &d7, &a5, &81,   1, &e9, &20, &3b, &3e, &6c, &40, &e2             ; 76a5: 1b d7 a5... ... :65a5[1]
+    equb &e5, &21, &e3, &e7, &31, &95, &b0, &8a,   1, &e8, &10, &1b             ; 76b1: e5 21 e3... .!. :65b1[1]
+    equb &b9, &64, &93, &5a, &a7, &7b, &eb, &26, &25, &6d, &d9, &86             ; 76bd: b9 64 93... .d. :65bd[1]
+    equb &f1, &32, &17, &f5, &9b, &4c,   1, &dd, &1c, &1f, &b2, &c4             ; 76c9: f1 32 17... .2. :65c9[1]
+    equb &35, &34, &81,   6, &47, &c4, &62,   1, &89, &b4, &71,   1             ; 76d5: 35 34 81... 54. :65d5[1]
+    equb &64, &2b, &2f, &a7, &7e, &20,   1, &e9, &b7, &94, &dc, &0f             ; 76e1: 64 2b 2f... d+/ :65e1[1]
+    equb &2c, &8e, &3f, &2e, &33, &ce, &0b, &37, &bd, &7c,   1, &7a             ; 76ed: 2c 8e 3f... ,.? :65ed[1]
+    equb &43, &2c, &7c, &df, &99, &6e, &30, &6e, &b5, &5d, &75, &97             ; 76f9: 43 2c 7c... C,| :65f9[1]
+    equb &cb, &15,   1, &c0,   7,   5, &e3, &37, &44, &e5, &10, &bc             ; 7705: cb 15 01... ... :6605[1]
+    equb &37, &f1, &89,   1, &aa, &e8, &a4, &dc, &11, &3d, &c2, &a4             ; 7711: 37 f1 89... 7.. :6611[1]
+    equb &5f, &37, &4d, &12,   1, &79, &8d,   1, &eb, &c0, &82, &3e             ; 771d: 5f 37 4d... _7M :661d[1]
+    equb &58, &52, &b5, &5d, &a5,   1, &c9, &b5, &b3, &dd, &4e, &14             ; 7729: 58 52 b5... XR. :6629[1]
+    equb &de, &78, &19, &57, &46, &56,   1, &c9, &be, &cb, &cc, &79             ; 7735: de 78 19... .x. :6635[1]
+    equb &c0, &74, &3f, &52, &d5, &f7, &c9, &67, &e8, &cb,   1, &e9             ; 7741: c0 74 3f... .t? :6641[1]
+    equb &b5, &c8, &3c, &86, &fd, &54, &64, &6e, &c5, &c4, &4b, &b7             ; 774d: b5 c8 3c... ..< :664d[1]
+    equb &73, &75,   1, &b8, &92, &6b, &a9, &56, &3d, &ea, &d2, &61             ; 7759: 73 75 01... su. :6659[1]
+    equb &2d, &d3, &24, &bf, &7c, &7b, &e0, &f1, &ed, &e3, &b2, &d1             ; 7765: 2d d3 24... -.$ :6665[1]
+    equb &e5, &41, &7b, &a6, &ec, &36,   1, &a8, &26, &6d, &99, &ff             ; 7771: e5 41 7b... .A{ :6671[1]
+    equb &c3, &40, &a3, &4c, &d4, &bc, &66, &d6, &60, &2f, &27, &33             ; 777d: c3 40 a3... .@. :667d[1]
+    equb &1c,   1, &b8, &5e, &2b, &d9, &81,   8, &3a, &ce, &ec, &bb             ; 7789: 1c 01 b8... ... :6689[1]
+    equb &26, &64, &53, &76, &7b,   1,   1, &b8, &d0, &cc, &dc, &93             ; 7795: 26 64 53... &dS :6695[1]
+    equb   1, &6d, &e8, &49, &7f, &ef, &91, &f4,   9, &6e, &c5, &ed             ; 77a1: 01 6d e8... .m. :66a1[1]
+    equb &58, &27, &3b, &75,   1, &59, &4b, &45, &ba, &2e, &40, &ec             ; 77ad: 58 27 3b... X'; :66ad[1]
+    equb &18, &fd, &9d, &e2, &48,   1, &e6, &5a, &4a, &97, &30, &74             ; 77b9: 18 fd 9d... ... :66b9[1]
+    equb   2, &32, &6b, &4d, &25, &10, &e2, &66,   6, &54, &57, &97             ; 77c5: 02 32 6b... .2k :66c5[1]
+    equb &0a,   1, &48, &57, &7f, &ca, &49, &50, &5b, &a7, &12, &6e             ; 77d1: 0a 01 48... ..H :66d1[1]
+    equb &86, &f8,   1, &b9, &d8, &e2, &ac, &d5, &12, &dd, &da, &fe             ; 77dd: 86 f8 01... ... :66dd[1]
+    equb &25, &83, &68, &b7, &10, &7a,   1, &62, &68, &57, &a3, &da             ; 77e9: 25 83 68... %.h :66e9[1]
+    equb &f2, &d6, &6e, &17,   1, &d8, &61, &1d, &ba, &64, &f4, &7b             ; 77f5: f2 d6 6e... ..n :66f5[1]
+    equb &b5, &7d, &c0, &80,   0, &51, &e6, &71, &e2, &dd, &93, &43             ; 7801: b5 7d c0... .}. :6701[1]
+    equb &99, &84, &d6, &73, &66, &47, &4e, &2c,   1, &39, &5c, &7c             ; 780d: 99 84 d6... ... :670d[1]
+    equb &cb, &6b, &0a, &5d, &2f, &92, &50, &cc, &3a, &33, &3c, &3b             ; 7819: cb 6b 0a... .k. :6719[1]
+    equb &37, &85, &9e,   1, &e8, &6b, &4f, &29,   2, &a4, &4f, &cc             ; 7825: 37 85 9e... 7.. :6725[1]
+    equb &a4, &c2, &42, &7e, &75, &1d, &12, &67, &61, &88,   1, &5c             ; 7831: a4 c2 42... ..B :6731[1]
+    equb &0f, &15, &30, &eb, &89, &22, &45, &3f, &c3, &20, &3b, &65             ; 783d: 0f 15 30... ..0 :673d[1]
+    equb &dd, &71,   1, &d8, &65, &62, &69, &42, &2d, &ea, &fa, &20             ; 7849: dd 71 01... .q. :6749[1]
+    equb &cd, &34, &79, &a5, &e7, &3c, &96, &d5, &7c,   1, &29, &81             ; 7855: cd 34 79... .4y :6755[1]
+    equb &38, &5a, &d7, &80, &8b, &86,   3, &c2, &62, &87, &77, &1f             ; 7861: 38 5a d7... 8Z. :6761[1]
+    equb &10,   2, &8b, &6b, &65, &ef, &de, &18, &b1, &57, &a1, &c2             ; 786d: 10 02 8b... ... :676d[1]
+    equb &d3, &51, &24, &10, &aa, &47, &7a, &f7,   1, &4b, &33, &62             ; 7879: d3 51 24... .Q$ :6779[1]
+    equb &dc, &35,   3, &83, &49,   8, &94, &b0, &b8, &57, &b7, &98             ; 7885: dc 35 03... .5. :6785[1]
+    equb   1, &9a, &99, &aa, &7b, &26, &14, &60, &b8, &13,   3, &ec             ; 7891: 01 9a 99... ... :6791[1]
+    equb &f7, &a2, &ce, &8d,   8, &71, &e4, &5c, &72, &79, &b0, &73             ; 789d: f7 a2 ce... ... :679d[1]
+    equb &da, &bb, &97, &17, &4f,   1, &88, &21, &9c, &2b, &55,   1             ; 78a9: da bb 97... ... :67a9[1]
+    equb &43, &0c, &56, &84,   6,   2,   2, &b9, &79, &bb, &2a, &86             ; 78b5: 43 0c 56... C.V :67b5[1]
+    equb &b5, &a2, &df, &59, &a5, &e5, &0b,   1, &48, &f0, &1f, &ad             ; 78c1: b5 a2 df... ... :67c1[1]
+    equb &f5, &1e, &e2, &d0, &ac, &c4, &4f, &30,   2, &c8, &81, &12             ; 78cd: f5 1e e2... ... :67cd[1]
+    equb &6b, &f7, &cf, &67, &40, &c7,   1, &69, &f0, &2c, &eb, &68             ; 78d9: 6b f7 cf... k.. :67d9[1]
+    equb &66, &26, &39, &0f, &a7, &81, &25,   0                                 ; 78e5: 66 26 39... f&9 :67e5[1]
+;ENDIF
+;.main_end
+ELSE
 
 IF SRAM
 align 16
+ENDIF
+ENDIF
+
+IF SRAM
 .sram_init2_end
 ENDIF
 
-if SRAM=0 AND P%>&6100:PRINT ~P%:ERROR "too much code!":ENDIF
+.main_end
+
+if SRAM=0 AND NOVELLA=FALSE AND P%>&6100:PRINT ~P%:ERROR "too much code!":ENDIF
 PRINT &6000-program_top,"byte(s) free"
 
-; PRINT ~P%
-; PRINT ~(main_end-main_begin)
+    copyblock base_address, main_end, load_address
+    clear base_address, load_address
 
-; ExileMC=7690
-
-org load_address+(P%-base_address)
+    org load_address + (main_end - base_address)
 
 IF SRAM
 .sram_init_begin
 ENDIF
 
+; **************************************************************
+; Initial Entry Point
+; **************************************************************
+
 .intro
+
+IF FSN = NET
+; **************************************************************
+; Relocated from ExileL to allow the main binaries to load
+; over Econet.
+; **************************************************************
+    lda #&8f                                                                   ; 7302: a9 8f       ..
+    ldx #&0c                                                                   ; 7304: a2 0c       ..
+    ldy #&ff                                                                   ; 7306: a0 ff       ..
+    jsr &fff4                                                                  ; 7308: 20 f4 ff     ..            ; Issue paged ROM service call, Reason X=12 - NMI claim
+ENDIF
     SEI
     CLD
     LDA #$7F
@@ -13512,6 +14174,13 @@ ENDIF
     DEC object_held
     LDX #$FF
     TXS
+
+IF NOVELLA = TRUE
+    lda l0296                                                                   ; 7913: ad 96 02    ...
+    and #&57 ; 'W'                                                              ; 7916: 29 57       )W
+    sta &01                                                                     ; 7918: 85 01       ..
+ENDIF
+
     LDA #$82
     STA intro_two
     LDA #$FC
@@ -13533,6 +14202,45 @@ sta background_objects_type+5-base_address+load_address,Y ; $1b76
     BNE L7230
     INC intro_three
     BNE L7230
+
+IF NOVELLA = TRUE
+.c793e
+l793f = c793e+1
+l7940 = c793e+2
+    lda load_address                                                           ; 793e: ad 00 12    ...
+.sub_c7941
+l7942 = sub_c7941+1
+l7943 = sub_c7941+2
+    sta base_address                                                            ; 7941: 8d 00 01    ...
+    inc l793f                                                                   ; 7944: ee 3f 79    .?y
+    bne c794c                                                                   ; 7947: d0 03       ..
+    inc l7940                                                                   ; 7949: ee 40 79    .@y
+.c794c
+    inc l7942                                                                   ; 794c: ee 42 79    .By
+    bne c7954                                                                   ; 794f: d0 03       ..
+    inc l7943                                                                   ; 7951: ee 43 79    .Cy
+.c7954
+    lda l793f                                                                   ; 7954: ad 3f 79    .?y
+    cmp #<intro                                                                 ; 7957: c9 ed       ..
+    bne c793e                                                                   ; 7959: d0 e3       ..
+    lda l7940                                                                   ; 795b: ad 40 79    .@y
+    cmp #>intro                                                                 ; 795e: c9 78       .x
+    bne c793e                                                                   ; 7960: d0 dc       ..
+    lda #&ff                                                                    ; 7962: a9 ff       ..
+    sta &fe43                                                                   ; 7964: 8d 43 fe    .C.
+    ldx #3                                                                      ; 7967: a2 03       ..
+.loop_c7969
+    lda l797a,x                                                                 ; 7969: bd 7a 79    .zy
+    jsr push_sound_to_chip                                                               ; 796c: 20 e4 13     ..
+    dex                                                                         ; 796f: ca          .
+    bpl loop_c7969                                                              ; 7970: 10 f7       ..
+
+IF SRAM = 0
+    lda &01                                                                     ; 7972: a5 01       ..
+    sta l499c                                                                   ; 7974: 8d 9c 49    ..I
+ENDIF
+
+ELSE
 .L724A
 lda load_address
 .L724D
@@ -13553,12 +14261,17 @@ sta base_address
     JSR push_sound_to_chip
     DEX
     BPL L726C
+ENDIF
+
 IF SRAM
     ldx #$0f
 .M7707
     lda #$0f
+;KLTODO: These are NOPd out in the STH binary I am using!
     sta $fe62
     stx $fe60
+;    nop:nop:nop
+;    nop:nop:nop
     stx $fe32
     stx $fe30
     ldy #$00
@@ -13597,7 +14310,17 @@ IF SRAM
     cmp #HI(sram_rom_end-sram_rom_begin+sram_ram_end+255)
     bcc M773F
 ENDIF
+
+IF NOVELLA = TRUE
+IF SRAM = 1
+    JMP intro1x
+ELSE
     JMP intro1
+ENDIF
+ELSE
+    JMP intro1
+ENDIF
+
 IF SRAM
 .M7758
     dex
@@ -13605,12 +14328,31 @@ IF SRAM
 .M775B
     jmp M775B
 ENDIF
+
+IF NOVELLA = TRUE
+IF SRAM = 1
+.intro1x
+    lda &01                                                                     ; 7972: a5 01       ..
+    sta l499c                                                                   ; 7974: 8d 9c 49    ..I
+    jmp intro1
+ENDIF
+.l797a
+    equb &ff, &df, &bf, &9f                                                     ; 797a: ff df bf... ...
+
+    jmp &3000                                                                   ; 797e: 4c 00 30    L.0
+ELSE
 .startup_sound
     equb $FF,$DF,$BF,$9F,$00
+;ENDIF
+
 if SRAM
     skip 10
 endif
+
+;IF NOVELLA = FALSE
     equb $14,$01,$89
+ENDIF
+
 .intro_end
 
 IF SRAM
@@ -13741,11 +14483,24 @@ IF ((unused_object_handler-handlers_start) AND $c000)<>0:ERROR "unused_object_ha
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 IF SRAM
-  SAVE "S.RAM",sram_ram_begin,sram_ram_end,intro,load_address
-  SAVE "S.ROM",sram_rom_begin,sram_rom_end
-  SAVE "S.INIT2",sram_init2_begin,sram_init2_end
-  SAVE "S.INIT",sram_init_begin,sram_init_end
+  SAVE "S.RAM", (sram_ram_begin + load_address - main_begin), (sram_ram_end + load_address - main_begin);,intro,load_address
+  SAVE "S.ROM", (sram_ram_end + load_address - main_begin), (sram_ram_end + (sram_rom_end - sram_rom_begin) + load_address - main_begin)
+  SAVE "S.INIT2", (sram_init2_begin + load_address - main_begin), (sram_init2_end + load_address - main_begin)
+  SAVE "S.INIT", sram_init_begin, sram_init_end
+
+  SAVE "ExileMC", load_address, intro_end
 ELSE
-  SAVE "B.MAIN",main_begin,main_end,intro,load_address
-  SAVE "B.INTRO",intro,intro_end
+  SAVE "B.MAIN", load_address, (main_end + load_address - main_begin)
+  SAVE "B.INTRO", intro,intro_end
+
+  SAVE "ExileB", load_address, intro_end
 ENDIF
+
+print "Start of Relocated code:", ~main_begin, "/", ~load_address
+print "End of Relocated code:", ~(main_end - 1), "/", ~(main_end + load_address - main_begin - 1)
+print "Start of Static code:", ~intro
+print "End of Static code:", ~(intro_end - 1)
+print "Load Address:", ~load_address
+print "File Length:", ~(intro_end-load_address)
+print "Execute Address:", ~intro
+
